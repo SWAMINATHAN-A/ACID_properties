@@ -1,42 +1,52 @@
-# ACID Lab — Transaction Simulator
+## ACID Property Simulator
 
-A Flask + MySQL website for learning database transaction properties. Includes a transaction dashboard, concurrent transfer requests, timestamped history, database event logs, CSV export, an ACID quiz, competitive-exam practice, learning notes, help, and project credits.
+A database transaction simulator demonstrating Atomicity, Consistency, Isolation, and Durability using Python, Flask, and MySQL.
 
-## Important
+### Prerequisites
+- Python 3.10 or newer
+- MySQL Server and MySQL Workbench
+- Git
 
-This is an educational simulator, not a banking product. Use sample data only. Do not enter real financial data or expose database credentials.
+### Setup Instructions
 
-## Files
+**1. Clone the repository**
+```bash
+git clone YOUR_GITHUB_REPOSITORY_URL
+cd YOUR_REPOSITORY_FOLDER
+```
 
-- `app.py` — Flask API and MySQL transaction logic.
-- `static/index.html` — responsive website, quiz, competitive questions and learning pages.
-- `schema.sql` — MySQL tables and starter accounts.
-- `.env.example` — configuration template. Copy it to `.env` and fill in your own credentials.
-- `render.yaml` and `Procfile` — deployment configuration examples.
+**2. Create the database**
 
-## Run locally on Windows
+Open MySQL Workbench, connect to your local MySQL server, and import `acid_simulator_full.sql`.
 
-1. Install Python 3.11+ and MySQL 8+.
-2. In MySQL Workbench, open and run `schema.sql`.
-3. In PowerShell, open this project folder and run:
+Alternatively, using a terminal:
+```bash
+mysql -u YOUR_MYSQL_USERNAME -p < acid_simulator_full.sql
+```
 
-   ```powershell
-   py -m venv .venv
-   .venv\Scripts\Activate.ps1
-   pip install -r requirements.txt
-   Copy-Item .env.example .env
-   ```
+**3. Configure environment variables**
 
-4. Edit `.env` and set `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`. Keep `.env` private; it is excluded by `.gitignore`.
-5. Start the app:
+Create a `.env` file using `.env.example` as a reference. Enter your own MySQL host, port, username, password, and database name.
 
-   ```powershell
-   python app.py
-   ```
+Never share or commit your real `.env` credentials.
 
-6. Open `http://127.0.0.1:5000`.
-7. Visit `http://127.0.0.1:5000/api/health` to confirm the server can reach MySQL.
+**4. Install dependencies**
 
-## How simultaneous transfers work
+```bash
+pip install -r requirements.txt
+```
 
-Every HTTP request opens its own MySQL connection and transaction. The server locks sender/receiver rows with `SELECT ... FOR UPDATE`, acquiring account locks in sorted ID order to reduce deadlock risk. Debit, credit, status update and log writes are committed together. Concurrent requests can execute on separate Flask threads and MySQL coordinates conflicting row updates. A simulated rollback intentionally rolls back the transfer and writes a separate failed-attempt record afterward.
+If `requirements.txt` is inside the `backend` folder, run:
+```bash
+pip install -r backend/requirements.txt
+```
+
+**5. Run the application**
+
+Follow the startup command and working directory specified by the project's Flask entry point.
+
+### Important Notes
+- Each user runs their own local MySQL database.
+- Import the provided SQL file before starting the backend.
+- Keep database credentials private.
+- Transactions and account balances persist in the configured MySQL database when successfully committed.
