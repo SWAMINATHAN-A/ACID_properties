@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACID Lab — Transaction Simulator</title>
+<style>
+:root {
+  --site-primary: #2457d6;
+  --site-on-primary: #ffffff;
+  --site-secondary: #dce7ff;
+  --site-on-secondary: #152b59;
+  --site-background: #f4f7fc;
+  --site-on-background: #17243b;
+  --site-font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --site-font-heading: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--site-font-body); background: light-dark(#f4f7fc,#0b1220); color: light-dark(#17243b,#e9efff); }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+#app { min-height: 100vh; width: 100%; border-radius: 0; background-color: var(--site-background); color: var(--site-on-background); }
+.shell { display: grid; grid-template-columns: 246px minmax(0,1fr); min-height: 100vh; }
+.sidebar { background: light-dark(#101d35,#0a1120); color: #eaf0ff; padding: calc(25px * var(--site-spacing-scale)) 16px; display:flex; flex-direction:column; gap:24px; border-right:1px solid light-dark(#1f3151,#26344e); }
+.brand { display:flex; align-items:center; gap:11px; padding: 0 10px; }
+.brand-mark { display:grid; place-items:center; width:42px; height:42px; background:linear-gradient(135deg,#3e76f6,#2449ba); border-radius:calc(13px * var(--site-radius-scale)); color:white; font-weight:900; box-shadow:0 8px 24px #2457d655; }
+.brand-name { font-size:18px; font-weight:850; letter-spacing:-.6px; }
+.brand-sub { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#9fb3d8; margin-top:3px; }
+.nav-label { color:#7f94ba; font-size:10px; text-transform:uppercase; letter-spacing:1.7px; font-weight:800; padding:0 13px; margin-bottom:4px; }
+.nav { display:grid; gap:5px; }
+.nav button { border:0; border-radius:10px; background:transparent; color:#b8c7e2; padding:12px 13px; display:flex; gap:12px; align-items:center; text-align:left; font-weight:650; font-size:13px; transition:.15s ease; }
+.nav button:hover { background:#ffffff12; color:white; }
+.nav button.active { background:#2c56bb; color:#fff; box-shadow:0 8px 20px #08173344; }
+.nav-icon { width:19px; display:inline-grid; place-items:center; font-size:16px; }
+.sidebar-bottom { margin-top:auto; background:#ffffff0b; border:1px solid #ffffff14; border-radius:14px; padding:14px; }
+.status-line { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:750; }
+.dot { width:8px; height:8px; background:#f4b74d; border-radius:50%; box-shadow:0 0 0 4px #f4b74d20; }
+.sidebar-bottom p { color:#9eafce; font-size:11px; line-height:1.55; margin:10px 0 0; }
+main { min-width:0; }
+.topbar { height:76px; display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 36px; background:light-dark(#ffffff,#111c2e); border-bottom:1px solid light-dark(#e2e8f3,#26344b); position:sticky; top:0; z-index:10; }
+.crumb { font-size:12px; color:light-dark(#6c7b95,#9aacc8); font-weight:650; }
+.crumb strong { color:light-dark(#17243b,#e9efff); }
+.top-actions { display:flex; gap:10px; align-items:center; }
+.pill { display:inline-flex; gap:7px; align-items:center; padding:8px 11px; border-radius:999px; background:light-dark(#f1f5fc,#1b2a43); border:1px solid light-dark(#e0e7f2,#31435f); font-size:11px; font-weight:800; color:light-dark(#53637d,#c5d3ec); }
+.pill .dot { width:7px; height:7px; }
+.content { max-width:1440px; margin:0 auto; padding:32px 36px 48px; }
+.page { display:none; animation:fade .22s ease; }
+.page.active { display:block; }
+@keyframes fade { from {opacity:.3; transform:translateY(4px)} to {opacity:1; transform:none} }
+.eyebrow { color:#3567d7; text-transform:uppercase; letter-spacing:1.8px; font-size:10px; font-weight:900; margin:0 0 9px; }
+h1,h2,h3,p { margin-top:0; }
+h1 { font-size:calc(34px * var(--site-heading-scale)); letter-spacing:-1.35px; line-height:1.15; margin-bottom:10px; font-weight:850; }
+h2 { font-size:calc(21px * var(--site-heading-scale)); letter-spacing:-.5px; margin-bottom:7px; }
+h3 { font-size:15px; letter-spacing:-.2px; margin-bottom:7px; }
+.lead { color:light-dark(#697891,#a7b7d2); max-width:700px; font-size:14px; line-height:1.7; margin-bottom:0; }
+.hero { display:flex; justify-content:space-between; align-items:flex-end; gap:25px; padding:4px 0 27px; }
+.hero-art { width:190px; height:116px; flex-shrink:0; position:relative; overflow:hidden; border-radius:18px; background:linear-gradient(135deg,#163f9b,#3973ed); padding:18px; color:white; box-shadow:0 12px 28px #2457d633; }
+.hero-art:before,.hero-art:after { content:""; position:absolute; border:1px solid #ffffff40; border-radius:50%; width:130px; height:130px; right:-38px; top:27px; }
+.hero-art:after { width:85px; height:85px; right:-16px; top:49px; }
+.hero-art strong { font-size:29px; display:block; position:relative; z-index:1; letter-spacing:-1px; }
+.hero-art span { display:block; color:#d6e3ff; font-size:10px; text-transform:uppercase; letter-spacing:1.2px; margin-top:4px; position:relative; z-index:1; }
+.grid { display:grid; gap:16px; }
+.stats { grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:22px; }
+.card { background:light-dark(#ffffff,#111c2e); border:1px solid light-dark(#e3e9f3,#263750); border-radius:calc(16px * var(--site-radius-scale)); padding:calc(21px * var(--site-spacing-scale)); box-shadow:0 4px 16px #182c4d06; min-width:0; }
+.stat-head { display:flex; justify-content:space-between; align-items:center; color:light-dark(#6b7a93,#a3b4ce); font-size:12px; font-weight:700; gap:8px; }
+.stat-icon { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:light-dark(#edf3ff,#1d3153); color:#3567d7; font-size:16px; }
+.stat-value { font-size:29px; letter-spacing:-1px; font-weight:850; margin-top:14px; }
+.stat-foot { color:light-dark(#8996aa,#8fa2c0); font-size:11px; margin-top:5px; }
+.two-col { grid-template-columns:minmax(0,1.35fr) minmax(300px,.9fr); align-items:start; }
+.section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:17px; }
+.section-head p { color:light-dark(#75839a,#a4b3ca); font-size:12px; margin:4px 0 0; line-height:1.5; }
+.btn { border:1px solid transparent; border-radius:10px; padding:10px 14px; font-size:12px; font-weight:800; transition:transform .12s ease, background .12s ease; display:inline-flex; justify-content:center; align-items:center; gap:8px; }
+.btn:hover { transform:translateY(-1px); }
+.btn.primary { background:var(--site-primary); color:var(--site-on-primary); box-shadow:0 5px 13px #2457d622; }
+.btn.primary:hover { filter:brightness(1.07); }
+.btn.ghost { background:light-dark(#fff,#15233a); color:light-dark(#41536e,#d8e3f7); border-color:light-dark(#dce4f0,#33445f); }
+.btn.danger { background:#fff0f0; color:#ba3434; border-color:#f3cccc; }
+.btn.small { padding:7px 10px; font-size:11px; }
+.btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+.field-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+.field { display:grid; gap:7px; min-width:0; }
+.field.full { grid-column:1/-1; }
+.field label { font-size:11px; font-weight:800; color:light-dark(#566780,#bdcbe2); }
+.field input,.field select { width:100%; min-width:0; padding:12px 12px; border-radius:9px; border:1px solid light-dark(#dce4f0,#344760); background:light-dark(#fbfcff,#0e192b); color:light-dark(#17243b,#e9efff); outline:none; font-size:13px; }
+.field input:focus,.field select:focus { border-color:#4c7cf0; box-shadow:0 0 0 3px #3567d71b; }
+.form-actions { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:17px; }
+.muted { color:light-dark(#77859b,#9bacc5); font-size:11px; line-height:1.55; }
+.account-list { display:grid; gap:10px; }
+.account { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid light-dark(#e7edf6,#293a54); border-radius:12px; }
+.avatar { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; color:#2e5fcf; background:light-dark(#e9f0ff,#1e345a); font-weight:900; font-size:12px; flex-shrink:0; }
+.account-info { min-width:0; flex:1; }
+.account-name { font-size:12px; font-weight:850; }
+.account-meta { color:light-dark(#8592a6,#94a7c4); font-size:10px; margin-top:4px; }
+.balance { font-size:14px; font-weight:850; text-align:right; white-space:nowrap; }
+.balance-note { color:light-dark(#8794a8,#93a5c1); font-size:10px; margin-top:4px; text-align:right; }
+.table-wrap { overflow:auto; border:1px solid light-dark(#e4eaf4,#2a3a54); border-radius:12px; }
+table { width:100%; border-collapse:collapse; min-width:690px; font-size:12px; }
+th { background:light-dark(#f6f8fc,#17253a); color:light-dark(#718099,#9fb0ca); text-transform:uppercase; letter-spacing:.8px; font-size:9px; text-align:left; padding:13px 14px; white-space:nowrap; }
+td { border-top:1px solid light-dark(#edf1f7,#25344b); padding:13px 14px; white-space:nowrap; }
+.status { display:inline-flex; padding:5px 8px; border-radius:99px; font-size:9px; letter-spacing:.4px; font-weight:900; }
+.status.COMMITTED { color:#168052; background:#e1f7ec; }
+.status.RUNNING { color:#976500; background:#fff2ce; }
+.status.ROLLED_BACK,.status.FAILED { color:#b42e3b; background:#ffeaec; }
+.status.PENDING { color:#4563a4; background:#eaf0ff; }
+.empty { text-align:center; color:light-dark(#7f8ca2,#9baac1); padding:28px 15px; font-size:12px; }
+.tx-list { display:grid; gap:10px; }
+.tx-item { border:1px solid light-dark(#e4eaf4,#2a3a54); border-radius:12px; padding:13px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+.tx-title { font-size:12px; font-weight:850; }
+.tx-time { color:light-dark(#8592a6,#9aacc6); font-size:10px; margin-top:5px; }
+.tx-amount { font-weight:850; font-size:13px; text-align:right; }
+.tx-item .status { margin-top:6px; }
+.banner { display:flex; gap:13px; align-items:flex-start; background:light-dark(#eef4ff,#142744); border:1px solid light-dark(#d6e4ff,#2c4771); padding:15px; border-radius:12px; margin-bottom:17px; }
+.banner-icon { font-size:18px; }
+.banner strong { font-size:12px; display:block; margin-bottom:4px; }
+.banner p { margin:0; font-size:11px; line-height:1.6; color:light-dark(#61738f,#b1c2df); }
+.quiz-layout { grid-template-columns:minmax(0,1.25fr) minmax(250px,.75fr); }
+.question-count { color:#3567d7; font-size:11px; font-weight:900; letter-spacing:1px; text-transform:uppercase; }
+.question { font-size:20px; line-height:1.45; font-weight:800; letter-spacing:-.4px; margin:14px 0 20px; }
+.options { display:grid; gap:10px; }
+.option { border:1px solid light-dark(#e0e7f2,#31435d); border-radius:11px; padding:13px; display:flex; align-items:center; gap:11px; text-align:left; background:light-dark(#fff,#121f33); color:inherit; font-size:12px; font-weight:650; }
+.option:hover { border-color:#6e91ed; }
+.option.selected { border-color:#3567d7; background:light-dark(#edf3ff,#1a2e50); }
+.option.correct { border-color:#28a56c; background:light-dark(#e8fbf1,#12352b); }
+.option.wrong { border-color:#d65c68; background:light-dark(#fff0f1,#3a2029); }
+.option-letter { width:26px; height:26px; display:grid; place-items:center; flex-shrink:0; border-radius:8px; background:light-dark(#f0f3f9,#23324a); color:light-dark(#5f6e84,#bac9e1); font-size:11px; font-weight:900; }
+.explanation { margin-top:14px; padding:13px; background:light-dark(#f5f8fd,#17263b); border-radius:10px; font-size:12px; line-height:1.6; color:light-dark(#61718b,#b7c5dc); }
+.progress { height:6px; background:light-dark(#e7edf6,#293a53); border-radius:99px; overflow:hidden; margin:13px 0 20px; }
+.progress span { display:block; height:100%; background:linear-gradient(90deg,#2457d6,#6b91f3); width:0; transition:width .2s ease; }
+.source { color:light-dark(#718199,#a1b2cb); font-size:10px; line-height:1.6; }
+.source a { color:#3c6ddd; }
+.learn-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.learn-card { position:relative; overflow:hidden; }
+.learn-letter { font-size:38px; line-height:1; font-weight:950; letter-spacing:-2px; color:#3567d7; margin-bottom:17px; }
+.learn-card p { font-size:12px; color:light-dark(#697891,#a8b7d0); line-height:1.7; margin:8px 0 13px; }
+.tag { display:inline-flex; border-radius:7px; padding:5px 8px; background:light-dark(#edf3ff,#1b3052); color:#3567d7; font-size:10px; font-weight:850; }
+.steps { display:grid; gap:12px; counter-reset:step; }
+.step { display:flex; gap:13px; padding:14px; border:1px solid light-dark(#e3e9f3,#2a3a53); border-radius:12px; }
+.step-number { counter-increment:step; width:30px; height:30px; flex-shrink:0; border-radius:9px; background:light-dark(#eaf0ff,#1d3152); color:#3567d7; display:grid; place-items:center; font-weight:900; font-size:12px; }
+.step-number:before { content:counter(step); }
+.step p { font-size:12px; line-height:1.65; color:light-dark(#6d7b92,#a6b6d0); margin:5px 0 0; }
+.team { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.person { padding:20px; }
+.person-initial { width:48px; height:48px; border-radius:14px; display:grid; place-items:center; background:linear-gradient(135deg,#dbe7ff,#eff4ff); color:#2457d6; font-size:14px; font-weight:950; margin-bottom:18px; }
+.person h3 { font-size:13px; line-height:1.4; }
+.person p { font-size:11px; color:light-dark(#76849a,#a5b4ca); margin-bottom:0; line-height:1.5; }
+.footer { margin-top:28px; border-top:1px solid light-dark(#e1e8f2,#27374f); padding-top:17px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:10px; color:light-dark(#8a97ab,#8fa2bf); }
+.toast { position:fixed; right:24px; bottom:24px; z-index:50; padding:13px 17px; border-radius:12px; color:white; background:#13274a; box-shadow:0 10px 35px #0003; font-size:12px; font-weight:700; opacity:0; transform:translateY(10px); pointer-events:none; transition:.2s ease; max-width:calc(100vw - 40px); }
+.toast.show { opacity:1; transform:none; }
+.modal-backdrop { position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; padding:20px; background:#08132699; }
+.modal-backdrop.show { display:flex; }
+.modal { background:light-dark(#fff,#111c2e); color:light-dark(#17243b,#e9efff); border:1px solid light-dark(#e3e9f3,#30415c); border-radius:16px; padding:24px; width:min(520px,100%); box-shadow:0 24px 80px #0003; }
+.modal p { color:light-dark(#697891,#a6b6cf); font-size:12px; line-height:1.7; }
+@media (max-width:1080px) { .stats {grid-template-columns:repeat(2,minmax(0,1fr));} .two-col,.quiz-layout {grid-template-columns:1fr;} .hero-art {display:none;} .team {grid-template-columns:1fr;} }
+@media (max-width:760px) { .shell {grid-template-columns:1fr;} .sidebar {padding:12px 12px 10px; gap:12px; border-right:0; border-bottom:1px solid #26344e;} .brand {padding:2px 7px;} .brand-mark {width:34px;height:34px;} .brand-name {font-size:16px;} .nav-label,.sidebar-bottom {display:none;} .nav {display:flex; overflow-x:auto; padding-bottom:2px;} .nav button {white-space:nowrap; padding:9px 11px; font-size:11px;} .topbar {height:58px; padding:0 17px;} .top-actions .pill {display:none;} .content {padding:23px 16px 35px;} h1 {font-size:28px;} .stats {gap:10px;} .card {padding:16px;} .stat-value {font-size:25px;} .field-grid,.learn-grid {grid-template-columns:1fr;} .field.full {grid-column:auto;} .form-actions {align-items:stretch; flex-direction:column;} .form-actions .btn {width:100%;} .hero {padding-bottom:20px;} .footer {flex-direction:column;} }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after {animation:none!important;transition:none!important;scroll-behavior:auto!important;} }
+</style>
+</head>
+<body>
+<div id="app">
+<div class="shell">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-mark">A</div><div><div class="brand-name">ACID Lab</div><div class="brand-sub">Database simulator</div></div></div>
+  <div><div class="nav-label">Workspace</div><nav class="nav" aria-label="Main navigation">
+    <button class="active" data-page="dashboard"><span class="nav-icon">▦</span>Dashboard</button>
+    <button data-page="quiz"><span class="nav-icon">◉</span>Quiz</button>
+    <button data-page="competitive"><span class="nav-icon">♜</span>Competitive exams</button>
+    <button data-page="learn"><span class="nav-icon">▤</span>Learn ACID</button>
+  </nav></div>
+  <div><div class="nav-label">Resources</div><nav class="nav">
+    <button data-page="help"><span class="nav-icon">?</span>Help & guide</button>
+    <button data-page="download"><span class="nav-icon">⇩</span>Download data</button>
+    <button data-page="about"><span class="nav-icon">✳</span>Developed by</button>
+  </nav></div>
+  <div class="sidebar-bottom"><div class="status-line"><span class="dot"></span><span id="sidebar-mode">Checking database…</span></div><p>Transfers are processed by the server and saved to MySQL. Use the dashboard to inspect transaction timestamps and logs.</p></div>
+</aside>
+<main>
+<header class="topbar"><div class="crumb">ACID LAB <span style="padding:0 7px;color:#a6b3c7">/</span> <strong id="crumb-current">Dashboard</strong></div><div class="top-actions"><span class="pill"><span class="dot"></span> MySQL-backed web app</span><button class="btn ghost small" id="theme-toggle" type="button" aria-label="Switch color theme">☀️ Light mode</button><button class="btn ghost small" id="reset-demo">Refresh data</button></div></header>
+<div class="content">
+<section class="page active" id="page-dashboard">
+  <div class="hero"><div><p class="eyebrow">Transaction control center</p><h1>Understand every<br>database transaction.</h1><p class="lead">Explore atomicity, consistency, isolation and durability through an interactive banking workflow. Start multiple demo transfers and inspect their live lifecycle.</p></div><div class="hero-art"><strong>ACID</strong><span>Reliable transactions</span></div></div>
+  <div class="grid stats">
+    <div class="card"><div class="stat-head">Total transactions <span class="stat-icon">↔</span></div><div class="stat-value" id="stat-total">0</div><div class="stat-foot">All demo attempts</div></div>
+    <div class="card"><div class="stat-head">Committed <span class="stat-icon">✓</span></div><div class="stat-value" id="stat-committed">0</div><div class="stat-foot">Completed successfully</div></div>
+    <div class="card"><div class="stat-head">Rolled back <span class="stat-icon">↶</span></div><div class="stat-value" id="stat-rolled">0</div><div class="stat-foot">Changes reversed</div></div>
+    <div class="card"><div class="stat-head">Committed value <span class="stat-icon">₹</span></div><div class="stat-value" id="stat-value">₹0</div><div class="stat-foot">Successful demo transfers</div></div>
+  </div>
+  <div class="grid two-col">
+    <div class="card"><div class="section-head"><div><h2>Create transfers</h2><p>Add independent transfers and launch them separately or together.</p></div><span class="tag">MULTI-TRANSACTION</span></div>
+      <div class="banner"><div class="banner-icon">ⓘ</div><div><strong>Simulation only</strong><p>Transfers change the sample balances in this page only. Live database integration is the next deployment step.</p></div></div>
+      <div id="transfer-forms"><form id="transfer-form" class="transfer-form"><div class="section-head"><strong>Transaction 1</strong><span class="muted transfer-state">Ready</span></div><div class="field-grid">
+        <div class="field"><label>From account</label><select data-role="sender" required></select></div>
+        <div class="field"><label>To account</label><select data-role="receiver" required></select></div>
+        <div class="field full"><label>Transfer amount (₹)</label><input data-role="amount" type="number" min="0.01" step="0.01" placeholder="e.g. 750.00" required></div>
+      </div><div class="form-actions"><span class="muted">Each request uses its own MySQL transaction.<br>Concurrent requests are coordinated with row locks.</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit">＋ Start transaction</button><button class="btn danger" type="button" data-role="rollback-transfer">↶ Simulate rollback</button></div></div></form></div><div class="form-actions" style="justify-content:space-between"><button class="btn ghost" type="button" id="add-transfer">＋ Add another transaction</button><button class="btn primary" type="button" id="run-all-transfers">▶ Run all transactions</button></div>
+    </div>
+    <div class="card"><div class="section-head"><div><h2>Account balances</h2><p>MySQL ledger · INR</p></div><span class="tag">DATABASE RECORDS</span></div><div class="account-list" id="account-list"></div></div>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="section-head"><div><h2>Transaction activity</h2><p>Timestamped event history for every transfer created in this session.</p></div><button class="btn ghost small" id="export-transactions">⇩ Export CSV</button></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Transfer</th><th>Amount</th><th>Status</th><th>Created at</th><th>Action</th></tr></thead><tbody id="history-body"></tbody></table><div class="empty" id="history-empty">No transactions yet. Create your first transfer above.</div></div></div>
+  <div class="footer"><span>ACID Lab · Educational transaction simulator</span><span>Educational simulator · No real funds are moved</span></div>
+</section>
+<section class="page" id="page-quiz">
+  <div class="hero"><div><p class="eyebrow">Test your understanding</p><h1>ACID knowledge check.</h1><p class="lead">Practice core DBMS concepts with instant feedback, short explanations and a score summary.</p></div><div class="hero-art"><strong>01—50</strong><span>Practice questions</span></div></div>
+  <div class="grid quiz-layout"><div class="card" id="quiz-card"><div class="section-head"><div><div class="question-count" id="quiz-count">Question 1 of 50</div><div class="progress"><span id="quiz-progress"></span></div></div><span class="tag">DBMS BASICS</span></div><div class="question" id="quiz-question"></div><div class="options" id="quiz-options"></div><div id="quiz-explanation"></div><div class="form-actions"><button class="btn ghost" id="quiz-restart">Restart quiz</button><button class="btn primary" id="quiz-next" disabled>Check answer →</button></div></div>
+  <div class="card"><p class="eyebrow">What you'll practise</p><h2>Build strong fundamentals</h2><div class="steps"><div class="step"><div class="step-number"></div><div><h3>Atomicity</h3><p>All operations commit together or are rolled back together.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Consistency</h3><p>Database rules remain satisfied before and after a valid transaction.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Isolation</h3><p>Concurrent transactions behave according to the chosen isolation rules.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Durability</h3><p>Committed changes persist according to the database's durability guarantees.</p></div></div></div></div></div>
+  <div class="footer"><span>50-question ACID and DBMS practice quiz.</span><span>Choose an option to get started.</span></div>
+</section>
+<section class="page" id="page-competitive">
+  <div class="hero"><div><p class="eyebrow">Exam preparation</p><h1>Practise like an exam.</h1><p class="lead">Official previous-year questions and clearly labelled practice items on DBMS and transactions.</p></div><div class="hero-art"><strong>PYQ</strong><span>Previous-year practice</span></div></div>
+  <div class="banner"><div class="banner-icon">ⓘ</div><div><strong>Source and attribution note</strong><p>Some items are adapted practice questions, not verbatim official paper text. Only treat an item as an official PYQ when its year/set and wording are verified against the linked original paper. The linked official GATE archive provides original papers and answer keys.</p></div></div>
+  <div class="grid quiz-layout"><div class="card"><div class="section-head"><div><div class="question-count" id="exam-count">Practice question 1</div><h2 id="exam-source-title">GATE CSE · Previous year</h2></div><span class="tag">PYQ-BASED</span></div><div class="question" id="exam-question"></div><div class="options" id="exam-options"></div><div id="exam-explanation"></div><div class="form-actions"><button class="btn ghost" id="exam-prev">← Previous</button><button class="btn primary" id="exam-next">Next question →</button></div></div>
+  <div class="card"><p class="eyebrow">Paper references</p><h2>Check the original source</h2><div class="steps"><div class="step"><div class="step-number"></div><div><h3>GATE CSE 2026 · Set 2</h3><p>Concurrent bank transfers / lost update; conflict-serializability schedule question.</p><p class="source"><a href="https://edurev.in/t/547483/previous-year-questions-gate-cse-transactions" target="_blank" rel="noreferrer">Open GATE transactions PYQ archive ↗</a></p></div></div><div class="step"><div class="step-number"></div><div><h3>GATE CSE 2024 · Set 2</h3><p>Question on durability after successful transaction completion.</p><p class="source"><a href="https://gate2024.iisc.ac.in/download/" target="_blank" rel="noreferrer">Official GATE 2024 downloads ↗</a></p></div></div><div class="step"><div class="step-number"></div><div><h3>UGC NET Computer Science</h3><p>Related DBMS PYQs include locking protocols, serializability and transaction processing.</p><p class="source"><a href="https://thewholetest.com/ugc-net/pyq/computer-science/topic/database-management-systems" target="_blank" rel="noreferrer">Open UGC NET DBMS PYQ archive ↗</a></p></div></div></div><p class="source" style="margin-top:16px">Official GATE previous-paper repository: <a href="https://gate2026.iitg.ac.in/download.html" target="_blank" rel="noreferrer">GATE 2026 downloads ↗</a></p></div></div>
+  <div class="footer"><span>Check linked original papers for official wording and answer keys.</span><span>Adapted items are labelled as such.</span></div>
+</section>
+<section class="page" id="page-learn">
+  <div class="hero"><div><p class="eyebrow">Learn the theory</p><h1>Four properties.<br>One reliable transaction.</h1><p class="lead">Understand the database guarantees behind the simulator and where each concept appears in the implementation.</p></div><div class="hero-art"><strong>4 pillars</strong><span>Database reliability</span></div></div>
+  <div class="grid learn-grid">
+    <article class="card learn-card"><div class="learn-letter">A.</div><h2>Atomicity</h2><span class="tag">ALL OR NOTHING</span><p>A transaction's changes are treated as one unit. If an operation fails before commit, rollback undoes the uncommitted changes.</p><h3>In this simulator</h3><p>The transfer starts a transaction, debits the sender, and can be intercepted. The original transaction is rolled back and a failed-attempt record is written separately.</p><p class="muted">Key operations: <code>start_transaction()</code>, <code>commit()</code>, <code>rollback()</code>.</p></article>
+    <article class="card learn-card"><div class="learn-letter">C.</div><h2>Consistency</h2><span class="tag">VALID STATES</span><p>A transaction must preserve the database's defined integrity rules, moving it from one valid state to another.</p><h3>In this simulator</h3><p>Positive transfer amount and different accounts are validated by the app. A MySQL CHECK constraint such as <code>balance &gt;= 0</code> can reject a negative account balance.</p><p class="muted">Key ideas: input validation, constraints and error handling.</p></article>
+    <article class="card learn-card"><div class="learn-letter">I.</div><h2>Isolation</h2><span class="tag">CONCURRENT WORK</span><p>Concurrent transactions should not interfere in ways that violate the database's isolation guarantees.</p><h3>In this simulator</h3><p>The desktop version used a short application buffer and MySQL <code>SELECT ... FOR UPDATE</code> row locks. This website accepts overlapping transfer requests through the Flask API. MySQL coordinates conflicting updates with row locks.</p><p class="muted">Key ideas: concurrent transactions, locks and isolation levels.</p></article>
+    <article class="card learn-card"><div class="learn-letter">D.</div><h2>Durability</h2><span class="tag">PERSIST AFTER COMMIT</span><p>After a successful commit, changes should survive failures covered by the database's durability guarantees.</p><h3>In this simulator</h3><p>The Python project reconnects to MySQL and checks that a committed transaction record remains available. Committed changes are saved in the configured MySQL database.</p><p class="muted">Key operations: commit, persistent storage and verification.</p></article>
+  </div>
+  <div class="card" style="margin-top:18px"><div class="section-head"><div><h2>Test the consistency constraint</h2><p>Ask MySQL to reject an account with a negative balance.</p></div><button class="btn primary" id="consistency-check">Run consistency test</button></div><div id="consistency-result" class="muted"></div></div>
+  <div class="card" style="margin-top:18px"><h2>What happens in a bank transfer?</h2><div class="steps" style="margin-top:17px"><div class="step"><div class="step-number"></div><div><h3>Begin transaction</h3><p>Create a transaction record, validate accounts and lock rows that need protection.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Apply both sides</h3><p>Debit the sender and credit the receiver inside the same transaction.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Commit or roll back</h3><p>Commit only when the transfer is complete. Otherwise roll back the uncommitted changes.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Verify and log</h3><p>Store transaction status and timestamps so the lifecycle can be inspected later.</p></div></div></div></div>
+  <div class="footer"><span>Learning content describes intended database concepts.</span><span>See Help for simulator limitations.</span></div>
+</section>
+<section class="page" id="page-help">
+  <div class="hero"><div><p class="eyebrow">Help center</p><h1>How to use ACID Lab.</h1><p class="lead">A quick guide to running transfers, interpreting statuses and understanding how transactions are processed and logged.</p></div></div>
+  <div class="grid two-col"><div class="card"><h2>Using the simulator</h2><div class="steps" style="margin-top:18px"><div class="step"><div class="step-number"></div><div><h3>Choose the sender and receiver</h3><p>Select two different sample accounts. The same account cannot send money to itself.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Enter a positive amount</h3><p>Use a positive number no greater than the sender's available balance.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Start multiple transfers</h3><p>Submit another transfer while an earlier one is running. Each demo transfer has its own timer and lifecycle.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Inspect or export</h3><p>Check timestamps and statuses in Transaction Activity, open details, or export the session as CSV.</p></div></div></div></div>
+  <div class="card"><h2>Status guide</h2><div class="tx-list" style="margin-top:18px"><div class="tx-item"><div><div class="tx-title">COMMITTED</div><div class="muted">Transfer completed in this demo.</div></div><span class="status COMMITTED">COMMITTED</span></div><div class="tx-item"><div><div class="tx-title">RUNNING</div><div class="muted">Transfer is still in progress.</div></div><span class="status RUNNING">RUNNING</span></div><div class="tx-item"><div><div class="tx-title">ROLLED_BACK</div><div class="muted">Transfer was cancelled before completion.</div></div><span class="status ROLLED_BACK">ROLLED BACK</span></div></div><div class="banner" style="margin-top:17px"><div class="banner-icon">⚠</div><div><strong>Important deployment note</strong><p>This academic simulator uses a hosted database. It is not a real banking system. Do not use real financial data, and do not expose the database credentials.</p></div></div></div></div>
+  <div class="footer"><span>Need a fresh session? Use Refresh data in the top bar.</span><span>Download data exports saved MySQL transactions.</span></div>
+</section>
+<section class="page" id="page-download">
+  <div class="hero"><div><p class="eyebrow">Your records</p><h1>Download transaction data.</h1><p class="lead">Export saved MySQL transaction history as a CSV file for review, reports or coursework documentation.</p></div></div>
+  <div class="grid two-col"><div class="card"><p class="eyebrow">Export options</p><h2>Session data</h2><p class="lead" style="font-size:12px;margin-bottom:18px">The export includes transaction ID, sender, receiver, amount, status and database creation timestamp for all saved transactions.</p><button class="btn primary" id="download-csv">⇩ Download transactions.csv</button><p class="muted" style="margin-top:14px">CSV opens in Excel, Google Sheets and most spreadsheet applications.</p></div><div class="card"><p class="eyebrow">Included in export</p><div class="steps"><div class="step"><div class="step-number"></div><div><h3>Transaction identifiers</h3><p>Unique ID for each saved database transfer.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Transfer details</h3><p>Sender, receiver and INR amount.</p></div></div><div class="step"><div class="step-number"></div><div><h3>Status and timestamps</h3><p>Created time and completion or rollback time, where available.</p></div></div></div></div></div>
+  <div class="card" style="margin-top:18px"><div class="section-head"><div><h2>Recent records</h2><p>Review the records that will be included in your export.</p></div><button class="btn ghost small" id="download-csv-secondary">Download CSV</button></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Sender</th><th>Receiver</th><th>Amount</th><th>Status</th><th>Created at</th><th>Completed at</th></tr></thead><tbody id="download-body"></tbody></table><div class="empty" id="download-empty">No records to export yet.</div></div></div>
+</section>
+<section class="page" id="page-about">
+  <div class="hero"><div><p class="eyebrow">The people behind the project</p><h1>Developed with a purpose.</h1><p class="lead">An educational project designed to make DBMS transaction concepts easier to see, test and understand.</p></div><div class="hero-art"><strong>DBMS</strong><span>Learn by doing</span></div></div>
+  <div class="grid team"><div class="card person"><div class="person-initial">LB</div><h3>LOKESH BUDURU</h3><p>REG NO: 25BCE1925</p></div><div class="card person"><div class="person-initial">AS</div><h3>AKANKSHA PRIYAL SINGH</h3><p>25BCE1919</p></div><div class="card person"><div class="person-initial">SA</div><h3>Dr. SWAMINATHAN A.</h3><p>Project faculty / guide</p></div></div>
+  <div class="grid two-col" style="margin-top:18px"><div class="card"><h2>Project objective</h2><p class="lead" style="font-size:12px">To demonstrate how ACID properties support reliable database transactions through an approachable interface, transaction logs, examples and practice questions.</p></div><div class="card"><h2>Technology direction</h2><p class="lead" style="font-size:12px">The web app uses Python, Flask, MySQL Connector and MySQL. The server performs each transfer in a database transaction; MySQL row locks coordinate concurrent requests.</p></div></div>
+  <div class="footer"><span>ACID Lab · Academic learning project</span><span>Created for DBMS education</span></div>
+</section>
+</div>
+</main>
+</div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal-backdrop" id="modal-backdrop"><div class="modal"><div class="section-head"><div><p class="eyebrow">Transaction detail</p><h2 id="modal-title">Transaction</h2></div><button class="btn ghost small" id="modal-close">Close ✕</button></div><div id="modal-body"></div></div></div>
+<script>
+let accounts = [];
+let transactions = [];
+let quizIndex = 0;
+let quizSelected = null;
+let quizChecked = false;
+let quizScore = 0;
+let quizAnswers = [];
+let examIndex = 0;
+let toastTimer = null;
+
+const quizQuestions = [
+ {q:"Which ACID property makes a transaction all-or-nothing?",o:["Atomicity", "Consistency", "Isolation", "Durability"],a:0,e:"Atomicity ensures that either all operations in a transaction succeed or none of its uncommitted changes remain."},
+ {q:"Which ACID property ensures committed changes survive a crash?",o:["Consistency", "Durability", "Isolation", "Atomicity"],a:1,e:"Durability protects committed changes against failures covered by the DBMS recovery guarantees."},
+ {q:"Which ACID property keeps concurrent transactions from interfering in unsafe ways?",o:["Isolation", "Durability", "Consistency", "Availability"],a:0,e:"Isolation controls the effects of concurrent execution."},
+ {q:"Which ACID property requires valid database rules to remain satisfied?",o:["Atomicity", "Durability", "Consistency", "Isolation"],a:2,e:"Consistency means transactions preserve database constraints and invariants."},
+ {q:"Which SQL statement makes the current transaction's changes permanent?",o:["ROLLBACK", "COMMIT", "SAVEPOINT", "DROP"],a:1,e:"COMMIT ends the transaction successfully and makes its changes committed."},
+ {q:"Which SQL statement undoes uncommitted work in the current transaction?",o:["UPDATE", "GRANT", "ROLLBACK", "COMMIT"],a:2,e:"ROLLBACK cancels the current transaction's uncommitted changes."},
+ {q:"A transfer debits one account but fails before crediting the other. Which property should prevent a partial transfer?",o:["Atomicity", "Durability", "Isolation", "Indexing"],a:0,e:"Atomicity prevents a transaction from leaving only part of its work applied."},
+ {q:"A committed balance update is still present after restarting MySQL. Which property is demonstrated?",o:["Consistency", "Isolation", "Durability", "Atomicity"],a:2,e:"Durability means committed changes persist."},
+ {q:"Two transactions both read the same balance and overwrite each other's updates. What anomaly is this?",o:["Dirty read", "Lost update", "Phantom read", "Deadlock"],a:1,e:"A lost update occurs when one concurrent write overwrites another update."},
+ {q:"A transaction reads another transaction's uncommitted change. What anomaly is this?",o:["Dirty read", "Lost update", "Phantom read", "Write skew only"],a:0,e:"A dirty read observes data that may later be rolled back."},
+ {q:"A transaction repeats a query and sees a newly inserted matching row. What anomaly is this?",o:["Dirty write", "Phantom read", "Lost update", "Atomicity failure"],a:1,e:"A phantom occurs when a repeated predicate query returns a changed set of rows."},
+ {q:"Which schedule property means the result is equivalent to some serial execution?",o:["Recoverability", "Serializability", "Durability", "Normalization"],a:1,e:"Serializability requires equivalence to a serial order of transactions."},
+ {q:"Two operations conflict when they access the same item, belong to different transactions, and at least one is what?",o:["A read", "A write", "A commit", "A rollback"],a:1,e:"At least one operation must be a write for the operations to conflict."},
+ {q:"Which graph is used to test conflict serializability?",o:["Wait-for graph", "Precedence graph", "B-tree", "ER diagram"],a:1,e:"A precedence graph represents ordering constraints between transactions."},
+ {q:"A cycle in a precedence graph implies the schedule is what?",o:["Conflict-serializable", "Not conflict-serializable", "Always recoverable", "Always deadlock-free"],a:1,e:"A cycle means the schedule is not conflict-serializable."},
+ {q:"Under basic two-phase locking, after a transaction releases its first lock, it may do what?",o:["Acquire any new lock", "Acquire only shared locks", "Acquire no new locks", "Commit only after all transactions commit"],a:2,e:"In the shrinking phase, no new locks may be acquired."},
+ {q:"Which phase of 2PL allows acquiring locks but not releasing them?",o:["Growing phase", "Shrinking phase", "Recovery phase", "Commit phase"],a:0,e:"During the growing phase, locks may be acquired but none released."},
+ {q:"Does basic two-phase locking guarantee conflict serializability?",o:["Yes", "No", "Only for read-only transactions", "Only when there are two transactions"],a:0,e:"2PL guarantees conflict serializability, although deadlocks can occur."},
+ {q:"Can two-phase locking cause deadlocks?",o:["No, never", "Yes", "Only with one transaction", "Only after a crash"],a:1,e:"Transactions may wait cyclically for locks held by one another."},
+ {q:"A wait-for graph contains a cycle. What does this indicate in a single-instance lock setting?",o:["A deadlock", "A committed transaction", "A serial schedule", "A checkpoint"],a:0,e:"A cycle in the wait-for graph indicates deadlock when each resource type has a single instance."},
+ {q:"What is the purpose of a SAVEPOINT?",o:["Permanently commit all work", "Mark a point for partial rollback", "Create a database user", "Disable constraints permanently"],a:1,e:"A savepoint permits rolling back part of a transaction without necessarily aborting all of it."},
+ {q:"Which isolation level generally prevents dirty reads but may allow non-repeatable reads?",o:["Read Uncommitted", "Read Committed", "Serializable", "No isolation"],a:1,e:"Read Committed prevents reading uncommitted data but repeated reads can differ."},
+ {q:"Which standard isolation level is strongest among these?",o:["Read Uncommitted", "Read Committed", "Repeatable Read", "Serializable"],a:3,e:"Serializable provides behavior equivalent to a serial execution."},
+ {q:"What does a foreign key primarily enforce?",o:["A formatting rule", "Referential integrity", "Encryption", "Transaction ordering"],a:1,e:"A foreign key constrains references between related tables."},
+ {q:"Which constraint prevents duplicate values in a column or column set?",o:["CHECK", "UNIQUE", "DEFAULT", "FOREIGN KEY only"],a:1,e:"UNIQUE enforces uniqueness for the constrained values."},
+ {q:"What does a NOT NULL constraint prevent?",o:["Duplicate rows", "Null values in the column", "Negative values only", "All updates"],a:1,e:"NOT NULL requires a value to be supplied rather than NULL."},
+ {q:"Which constraint can enforce that an account balance is non-negative?",o:["CHECK (balance >= 0)", "ORDER BY balance", "GROUP BY balance", "CREATE INDEX only"],a:0,e:"A CHECK constraint can enforce a row-level balance condition."},
+ {q:"What is a database transaction?",o:["A logical unit of database work", "A CSS component", "A database backup only", "A network protocol"],a:0,e:"Transactions group operations into a unit that can commit or roll back."},
+ {q:"What is the usual purpose of a database log in recovery?",o:["Store page colors", "Record changes and transaction events for recovery", "Replace all tables", "Prevent all concurrent reads"],a:1,e:"Logs support recovery by recording transaction and update information."},
+ {q:"What does a checkpoint help the DBMS do?",o:["Remove all constraints", "Reduce recovery work after a failure", "Guarantee no deadlocks", "Convert SQL to HTML"],a:1,e:"A checkpoint records a recovery position so recovery need not process the entire log from the beginning."},
+ {q:"Which action typically releases transaction-held row locks in MySQL?",o:["COMMIT or ROLLBACK", "SELECT alone in every case", "CREATE USER", "DESCRIBE TABLE"],a:0,e:"Ending a transaction with COMMIT or ROLLBACK releases its transactional locks."},
+ {q:"What is a dirty write?",o:["Writing over another transaction's uncommitted data", "Reading a committed value twice", "Using a NULL value", "Updating an indexed column"],a:0,e:"A dirty write occurs when one transaction overwrites data written by another uncommitted transaction."},
+ {q:"Which anomaly occurs when the same row returns different committed values on repeated reads?",o:["Non-repeatable read", "Dirty write", "Deadlock", "Phantom only"],a:0,e:"A non-repeatable read occurs when another committed transaction changes a row between reads."},
+ {q:"What does atomicity require when a transaction fails before commit?",o:["Keep every partial change", "Undo its uncommitted effects", "Commit automatically", "Delete the whole database"],a:1,e:"Atomicity means failed work is not left partially applied."},
+ {q:"Which of these is a transaction state?",o:["Active", "Indexed", "Normalized", "Compiled"],a:0,e:"Active is a standard transaction state while the transaction is executing."},
+ {q:"What does a COMMIT indicate to the DBMS?",o:["The transaction completed successfully", "The database must be dropped", "All other sessions must stop", "Every table must be rebuilt"],a:0,e:"COMMIT marks successful completion of the transaction."},
+ {q:"Which property is most directly associated with enforcing balance >= 0?",o:["Consistency", "Durability", "Isolation", "Atomicity"],a:0,e:"A valid balance constraint is part of database consistency."},
+ {q:"Two transactions update different rows and do not affect each other's results. Which goal is being supported?",o:["Isolation", "Denormalization", "Index rebuilding", "Data compression"],a:0,e:"Isolation aims to keep concurrent transactions from interfering incorrectly."},
+ {q:"Which operation is generally non-conflicting with another transaction's read of the same item?",o:["Read versus read", "Read versus write", "Write versus read", "Write versus write"],a:0,e:"Two reads of the same item do not conflict because neither changes the item."},
+ {q:"What is a serial schedule?",o:["Transactions interleave every operation", "One transaction completes before the next begins", "All transactions roll back", "Only read operations occur"],a:1,e:"A serial schedule runs transactions one after another without interleaving."},
+ {q:"Which recovery action is associated with a transaction that has not committed?",o:["Undo", "Always redo only", "Ignore all its effects", "Create an index"],a:0,e:"Recovery generally undoes effects of incomplete transactions where required by the logging protocol."},
+ {q:"Which recovery action may reapply updates from committed transactions not yet reflected in data pages?",o:["Redo", "Normalize", "Rollback every transaction", "Drop table"],a:0,e:"Redo reapplies logged changes needed to make committed work present in database files."},
+ {q:"What does isolation not necessarily mean in every implementation?",o:["Transactions cannot run concurrently", "Concurrency may be controlled by locks or MVCC", "Results should respect the isolation level", "Transactions may overlap in execution"],a:0,e:"Isolation does not require all transactions to run one at a time; concurrency control can permit overlap."},
+ {q:"What is a deadlock?",o:["A cycle of transactions waiting for resources held by one another", "A successful commit", "A constraint violation only", "A database export"],a:0,e:"Deadlock occurs when a set of transactions wait indefinitely in a cycle."},
+ {q:"Which action is commonly used to resolve a detected deadlock?",o:["Abort one victim transaction", "Commit every waiting transaction", "Remove all primary keys", "Disable the database log"],a:0,e:"A DBMS may abort a victim transaction to break the wait cycle."},
+ {q:"What does a primary key guarantee?",o:["Uniqueness and non-null identity for each row", "Every value is encrypted", "Every row is sorted physically", "Every update is durable without commit"],a:0,e:"A primary key uniquely identifies each row and cannot contain NULL."},
+ {q:"What is the purpose of a transaction boundary?",o:["Define the work included in commit or rollback", "Change the page theme", "Create a view automatically", "Convert tables to files"],a:0,e:"The boundary determines which operations are included in a transaction."},
+ {q:"Which statement about ROLLBACK is correct?",o:["It normally undoes uncommitted transaction changes", "It permanently commits changes", "It always deletes the database", "It makes all constraints optional"],a:0,e:"ROLLBACK abandons the current transaction's uncommitted work."},
+ {q:"Which technique allows readers and writers to coordinate using multiple row versions?",o:["MVCC", "B-tree splitting", "HTML rendering", "DNS caching"],a:0,e:"Multi-version concurrency control can let readers access consistent versions while writers make changes."},
+ {q:"Why should a transfer debit and credit be in one transaction?",o:["To avoid partial completion if either step fails", "To force all users to share one account", "To remove the need for validation", "To disable logging"],a:0,e:"One transaction makes the debit and credit succeed or fail together."}
+];
+const examQuestions = [
+ {source:"GATE CSE 2026 · Set 2 (adapted) · Concurrent bank transfers",q:"Two concurrent transfers both read an account balance of ₹11,000 and each attempt to transfer ₹10,000. Both receivers are credited, but the sender is debited only once. Which properties are most clearly violated?",o:["Consistency and isolation","Atomicity and durability only","Durability only","None; the balance is valid"],a:0,e:"The outcome violates consistency (the account invariant / funds constraint is broken) and isolation (concurrent updates interfered). Adapted from a reported GATE CSE 2026 Set 2 transaction question.",url:"https://edurev.in/t/547483/previous-year-questions-gate-cse-transactions"},
+ {source:"GATE CSE 2024 · Set 2 (adapted) · Durability",q:"A DBMS reports that a transaction completed successfully. A system crash occurs before all changed pages have been written back to their final data-file locations. Which ACID property requires the committed effect to persist?",o:["Atomicity","Consistency","Isolation","Durability"],a:3,e:"Durability requires committed changes to persist even after failures covered by the database's recovery guarantees.",url:"https://gate2024.iisc.ac.in/download/"},
+ {source:"GATE CSE 2024 · Two-phase locking (topic practice)",q:"Under the basic two-phase locking protocol, after a transaction releases its first lock, what is true?",o:["It may acquire unlimited new locks","It cannot acquire any new locks","It must immediately commit","All other transactions are rolled back"],a:1,e:"In the shrinking phase, a transaction may release locks but may not acquire new locks. Two-phase locking ensures conflict serializability, though deadlocks can still occur.",url:"https://edurev.in/t/547483/previous-year-questions-gate-cse-transactions"},
+ {source:"GATE CSE · Transactions & concurrency (topic practice)",q:"When do two operations from different transactions conflict on the same data item?",o:["Only when both are reads","When at least one operation is a write","Only when both transactions commit","Never, if they run concurrently"],a:1,e:"Conflicting operations access the same data item, belong to different transactions, and at least one is a write. This is central to conflict serializability questions.",url:"https://questions.examside.com/past-years/gate/gate-cse/database-management-system/transactions-and-concurrency"},
+ {source:"UGC NET Computer Science · DBMS PYQ topic practice",q:"Which graph is commonly used to detect deadlocks by representing which transaction is waiting for another?",o:["Precedence graph","Wait-for graph","B-tree","Entity-relationship diagram"],a:1,e:"A wait-for graph represents transaction waits and can be used to detect deadlocks. This is adapted topic practice, not a verbatim attributed paper question.",url:"https://thewholetest.com/ugc-net/pyq/computer-science/topic/database-management-systems"}
+];
+
+async function api(path, options={}) {
+  const response = await fetch(path, {headers:{"Content-Type":"application/json",...(options.headers||{})}, ...options});
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json") ? await response.json() : null;
+  if (!response.ok) throw new Error((data && (data.error || data.message)) || `Request failed (${response.status})`);
+  return data;
+}
+function fmtMoney(n){return "₹"+Number(n).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtTime(value){if(!value)return "—";const d=new Date(value);return Number.isNaN(d.getTime())?String(value):d.toLocaleString("en-IN",{year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});}
+function showToast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),3000);}
+function statusClass(s){return String(s||"").replace(/[^A-Z_]/g,"");}
+function renderSelects(){document.querySelectorAll(".transfer-form").forEach(form=>{const sender=form.querySelector("[data-role=sender]"),receiver=form.querySelector("[data-role=receiver]");if(!sender||!receiver)return;const prevS=sender.value,prevR=receiver.value;[sender,receiver].forEach(select=>{select.innerHTML="";accounts.forEach(a=>select.add(new Option(`${a.account_name} · #${a.account_id}`,a.account_id)));});if(accounts.length){sender.value=accounts.some(a=>String(a.account_id)===prevS)?prevS:String(accounts[0].account_id);receiver.value=accounts.some(a=>String(a.account_id)===prevR)?prevR:String(accounts[Math.min(1,accounts.length-1)].account_id);if(sender.value===receiver.value&&accounts.length>1)receiver.value=String(accounts.find(a=>String(a.account_id)!==sender.value).account_id);}});}
+function renderAccounts(){const list=document.getElementById("account-list");list.innerHTML="";accounts.forEach(a=>{const row=document.createElement("div");row.className="account";const initials=String(a.account_name).split(" ").map(s=>s[0]).join("").slice(0,2);row.innerHTML=`<div class="avatar">${initials}</div><div class="account-info"><div class="account-name">${a.account_name}</div><div class="account-meta">Account #${a.account_id}</div></div><div><div class="balance">${fmtMoney(a.balance)}</div><div class="balance-note">Available balance</div></div>`;list.appendChild(row);});}
+function renderHistory(){const body=document.getElementById("history-body"),empty=document.getElementById("history-empty");body.innerHTML="";empty.style.display=transactions.length?"none":"block";transactions.forEach(t=>{const tr=document.createElement("tr");tr.innerHTML=`<td><strong>#${t.id}</strong></td><td>${t.senderName} → ${t.receiverName}</td><td>${fmtMoney(t.amount)}</td><td><span class="status ${statusClass(t.status)}">${String(t.status).replace("ROLLED_BACK","ROLLED BACK")}</span></td><td>${fmtTime(t.createdAt)}</td><td><button class="btn ghost small" data-detail="${t.id}">Details</button></td>`;body.appendChild(tr);});document.querySelectorAll("[data-detail]").forEach(b=>b.addEventListener("click",()=>showDetails(Number(b.dataset.detail))));document.getElementById("stat-total").textContent=transactions.length;document.getElementById("stat-committed").textContent=transactions.filter(t=>t.status==="COMMITTED").length;document.getElementById("stat-rolled").textContent=transactions.filter(t=>t.status==="FAILED").length;document.getElementById("stat-value").textContent=fmtMoney(transactions.filter(t=>t.status==="COMMITTED").reduce((s,t)=>s+Number(t.amount),0));renderDownloadTable();}
+function renderDownloadTable(){const body=document.getElementById("download-body"),empty=document.getElementById("download-empty");if(!body)return;body.innerHTML="";empty.style.display=transactions.length?"none":"block";transactions.forEach(t=>{const tr=document.createElement("tr");tr.innerHTML=`<td>#${t.id}</td><td>${t.senderName}</td><td>${t.receiverName}</td><td>${fmtMoney(t.amount)}</td><td>${t.status}</td><td>${fmtTime(t.createdAt)}</td><td>${t.completedAt?fmtTime(t.completedAt):"—"}</td>`;body.appendChild(tr);});}
+async function refreshAll(showError=true){try{const [a,t,h]=await Promise.all([api("/api/accounts"),api("/api/transactions"),api("/api/health")]);accounts=a;transactions=t;renderSelects();renderAccounts();renderHistory();document.getElementById("sidebar-mode").textContent=h.database==="connected"?"MySQL connected":"Database unavailable";document.querySelector(".top-actions .pill").innerHTML='<span class="dot" style="background:#2dbb78"></span> MySQL connected';}catch(e){document.getElementById("sidebar-mode").textContent="Database unavailable";document.querySelector(".top-actions .pill").innerHTML='<span class="dot" style="background:#d75a63"></span> MySQL unavailable';if(showError)showToast(e.message+". Check .env and schema.sql.");}}
+let transferCounter=1;
+function wireTransferForm(form){form.addEventListener("submit",e=>{e.preventDefault();submitTransfer(form,false);});form.querySelector('[data-role="rollback-transfer"]').addEventListener("click",()=>submitTransfer(form,true));}
+function addTransferForm(){transferCounter++;const original=document.querySelector(".transfer-form");const clone=original.cloneNode(true);clone.id=`transfer-form-${transferCounter}`;clone.querySelector(".section-head strong").textContent=`Transaction ${transferCounter}`;clone.querySelector(".transfer-state").textContent="Ready";clone.querySelector('[data-role="amount"]').value="";clone.querySelector('[data-role="rollback-transfer"]').textContent="↶ Simulate rollback";const remove=document.createElement("button");remove.type="button";remove.className="btn ghost";remove.textContent="Remove";remove.addEventListener("click",()=>clone.remove());clone.querySelector(".form-actions div").appendChild(remove);document.getElementById("transfer-forms").appendChild(clone);renderSelects();wireTransferForm(clone);}
+async function submitTransfer(form,simulateRollback=false){const senderId=Number(form.querySelector('[data-role="sender"]').value),receiverId=Number(form.querySelector('[data-role="receiver"]').value),amount=Number(form.querySelector('[data-role="amount"]').value),state=form.querySelector(".transfer-state");if(senderId===receiverId){showToast("Choose two different accounts.");return;}if(!Number.isFinite(amount)||amount<=0){showToast("Enter a valid positive amount.");return;}state.textContent="Running…";try{const result=await api("/api/transfers",{method:"POST",body:JSON.stringify({sender_id:senderId,receiver_id:receiverId,amount,simulate_rollback:simulateRollback})});state.textContent=`${result.status} · #${result.id}`;await refreshAll(false);if(result.status==="COMMITTED"){showToast(`Transaction #${result.id} committed to MySQL.`);form.querySelector('[data-role="amount"]').value="";}else{showToast(`Transaction #${result.id}: changes rolled back.`);}}catch(e){state.textContent="Failed";await refreshAll(false);showToast(e.message);}}
+wireTransferForm(document.getElementById("transfer-form"));
+document.getElementById("add-transfer").addEventListener("click",addTransferForm);
+document.getElementById("run-all-transfers").addEventListener("click",()=>{const forms=[...document.querySelectorAll(".transfer-form")];Promise.all(forms.map(form=>{if(!form.querySelector('[data-role="amount"]').value)return Promise.resolve();return submitTransfer(form,false);}));});
+const themeToggle=document.getElementById("theme-toggle");
+function applyTheme(theme){document.documentElement.style.colorScheme=theme;document.documentElement.dataset.theme=theme;themeToggle.textContent=theme==="dark"?"☀️ Light mode":"🌙 Dark mode";themeToggle.setAttribute("aria-label",theme==="dark"?"Switch to light mode":"Switch to dark mode");}
+let savedTheme="dark";try{savedTheme=localStorage.getItem("acid-lab-theme")||"dark";}catch(e){}
+applyTheme(savedTheme);
+themeToggle.addEventListener("click",()=>{const next=document.documentElement.dataset.theme==="dark"?"light":"dark";applyTheme(next);try{localStorage.setItem("acid-lab-theme",next);}catch(e){}});
+document.getElementById("reset-demo").textContent="Refresh data";document.getElementById("reset-demo").addEventListener("click",()=>refreshAll());
+document.getElementById("export-transactions").addEventListener("click",()=>{window.location.href="/api/transactions.csv";});document.getElementById("download-csv").addEventListener("click",()=>{window.location.href="/api/transactions.csv";});document.getElementById("download-csv-secondary").addEventListener("click",()=>{window.location.href="/api/transactions.csv";});
+document.querySelectorAll("[data-page]").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===btn.dataset.page));document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${btn.dataset.page}`));const labels={dashboard:"Dashboard",quiz:"Quiz",competitive:"Competitive exams",learn:"Learn ACID",help:"Help & guide",download:"Download data",about:"Developed by"};document.getElementById("crumb-current").textContent=labels[btn.dataset.page];if(btn.dataset.page==="download")renderDownloadTable();window.scrollTo({top:0,behavior:"smooth"});}));
+document.getElementById("modal-close").addEventListener("click",()=>document.getElementById("modal-backdrop").classList.remove("show"));document.getElementById("modal-backdrop").addEventListener("click",e=>{if(e.target.id==="modal-backdrop")e.currentTarget.classList.remove("show");});
+async function showDetails(id){try{const data=await api(`/api/transactions/${id}`);const t=data.transaction;document.getElementById("modal-title").textContent=`Transaction #${t.id}`;const logs=data.logs.map((log,i)=>`<div class="step"><div class="step-number"></div><div><h3>${log.operation}</h3><p>${fmtTime(log.created_at)} — ${log.message||""}</p></div></div>`).join("");document.getElementById("modal-body").innerHTML=`<div class="tx-item"><div><div class="tx-title">${t.sender_name||"Unknown"} → ${t.receiver_name||"Unknown"}</div><div class="tx-time">Created: ${fmtTime(t.created_at)}</div></div><div class="tx-amount">${fmtMoney(t.amount)}<br><span class="status ${statusClass(t.status)}">${t.status}</span></div></div><h3 style="margin-top:20px">Database event log</h3><div class="steps">${logs||"No logs recorded."}</div>`;document.getElementById("modal-backdrop").classList.add("show");}catch(e){showToast(e.message);}}
+function renderQuiz(){const q=quizQuestions[quizIndex];document.getElementById("quiz-count").textContent=`Question ${quizIndex+1} of ${quizQuestions.length}`;document.getElementById("quiz-progress").style.width=`${(quizIndex/quizQuestions.length)*100}%`;document.getElementById("quiz-question").textContent=q.q;const opts=document.getElementById("quiz-options");opts.innerHTML="";q.o.forEach((v,i)=>{const b=document.createElement("button");b.className="option"+(quizSelected===i?" selected":"")+(quizChecked&&i===q.a?" correct":"")+(quizChecked&&quizSelected===i&&i!==q.a?" wrong":"");b.innerHTML=`<span class="option-letter">${String.fromCharCode(65+i)}</span><span>${v}</span>`;b.disabled=quizChecked;b.addEventListener("click",()=>{quizSelected=i;renderQuiz();});opts.appendChild(b);});document.getElementById("quiz-explanation").innerHTML=quizChecked?`<div class="explanation"><strong>${quizSelected===q.a?"Correct!":"Not quite."}</strong> ${q.e}</div>`:"";const next=document.getElementById("quiz-next");next.disabled=quizSelected===null&&!quizChecked;next.textContent=quizChecked?(quizIndex===quizQuestions.length-1?"View score →":"Next question →"):"Check answer →";}
+document.getElementById("quiz-next").addEventListener("click",()=>{if(!quizChecked){if(quizSelected===null)return;quizChecked=true;quizAnswers[quizIndex]=quizSelected;if(quizSelected===quizQuestions[quizIndex].a)quizScore++;renderQuiz();}else if(quizIndex<quizQuestions.length-1){quizIndex++;quizSelected=null;quizChecked=false;renderQuiz();}else{document.getElementById("quiz-question").textContent=`You scored ${quizScore} out of ${quizQuestions.length}.`;document.getElementById("quiz-count").textContent="Quiz complete";document.getElementById("quiz-progress").style.width="100%";document.getElementById("quiz-options").innerHTML="";document.getElementById("quiz-explanation").innerHTML=`<div class="explanation">${quizScore>=8?"Excellent work!":"Good practice—review the Learn ACID section and try again."} You can restart to retake the quiz.</div>`;document.getElementById("quiz-next").disabled=true;document.getElementById("quiz-next").textContent="Quiz complete";}});
+document.getElementById("quiz-restart").addEventListener("click",()=>{quizIndex=0;quizSelected=null;quizChecked=false;quizScore=0;quizAnswers=[];renderQuiz();});
+function renderExam(){const q=examQuestions[examIndex];document.getElementById("exam-count").textContent=`Practice question ${examIndex+1} of ${examQuestions.length}`;document.getElementById("exam-source-title").textContent=q.source;document.getElementById("exam-question").textContent=q.q;document.getElementById("exam-explanation").innerHTML="";const opts=document.getElementById("exam-options");opts.innerHTML="";q.o.forEach((v,i)=>{const b=document.createElement("button");b.className="option";b.innerHTML=`<span class="option-letter">${String.fromCharCode(65+i)}</span><span>${v}</span>`;b.addEventListener("click",()=>{opts.querySelectorAll("button").forEach((x,j)=>{x.disabled=true;if(j===q.a)x.classList.add("correct");if(j===i&&i!==q.a)x.classList.add("wrong");});document.getElementById("exam-explanation").innerHTML=`<div class="explanation"><strong>${i===q.a?"Correct!":"Review this one."}</strong> ${q.e}<br><span class="source">Source: <a href="${q.url}" target="_blank" rel="noreferrer">View reference ↗</a></span></div>`;});opts.appendChild(b);});document.getElementById("exam-prev").disabled=examIndex===0;document.getElementById("exam-next").textContent=examIndex===examQuestions.length-1?"Back to first →":"Next question →";}
+document.getElementById("exam-prev").addEventListener("click",()=>{if(examIndex>0){examIndex--;renderExam();}});document.getElementById("exam-next").addEventListener("click",()=>{examIndex=(examIndex+1)%examQuestions.length;renderExam();});
+document.getElementById("consistency-check").addEventListener("click",async()=>{const out=document.getElementById("consistency-result");out.textContent="Testing MySQL constraint…";try{const r=await api("/api/demos/consistency",{method:"POST",body:"{}"});out.textContent=r.message;showToast("Consistency constraint verified.");}catch(e){out.textContent=e.message;showToast(e.message);}});
+renderQuiz();renderExam();refreshAll();setInterval(()=>refreshAll(false),10000);
+</script>
+</body>
+</html>

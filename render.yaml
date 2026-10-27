@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: acid-lab-web
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --threads 8 --timeout 60
+    healthCheckPath: /api/health
+    envVars:
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        value: "3306"
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_DATABASE
+        value: acid_simulator
+      - key: MYSQL_SSL_DISABLED
+        value: "false"
